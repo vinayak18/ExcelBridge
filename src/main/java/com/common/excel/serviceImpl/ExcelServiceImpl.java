@@ -1,6 +1,5 @@
 package com.common.excel.serviceImpl;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -15,11 +14,13 @@ import java.util.stream.Collectors;
 
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.common.excel.model.SaveSheetResponse;
 import com.common.excel.model.User;
+import com.common.excel.repository.DatabaseRepository;
 import com.common.excel.service.ExcelService;
 
 @Service
@@ -27,8 +28,8 @@ public class ExcelServiceImpl implements ExcelService {
 	
     private final ExecutorService executorService = Executors.newCachedThreadPool();
 
-//    @Autowired
-//    private DatabaseService databaseService; // Assume this handles DB operations
+    @Autowired
+    private DatabaseRepository databaseRepository; // Assume this handles DB operations
 
 
 	@Override
@@ -107,7 +108,7 @@ public class ExcelServiceImpl implements ExcelService {
             Sheet sheet = workbook.getSheetAt(sheetIndex);
             sheetName = sheet.getSheetName();
 
-            List<Map<String, String>> rowData = new ArrayList<>();
+            List<Map<String, Object>> rowData = new ArrayList<>();
             Iterator<Row> rowIterator = sheet.iterator();
             if (!rowIterator.hasNext()) {
             	return new SaveSheetResponse(sheetName, rowsProcessed, errors);
@@ -120,7 +121,7 @@ public class ExcelServiceImpl implements ExcelService {
             int rowIndex = 1;
             while (rowIterator.hasNext()) {
                 Row row = rowIterator.next();
-                Map<String, String> rowMap = new HashMap<>();
+                Map<String, Object> rowMap = new HashMap<>();
                 boolean isValidRow = true;
                 for (int i = 0; i < headers.size(); i++) {
                 	try {
@@ -139,7 +140,7 @@ public class ExcelServiceImpl implements ExcelService {
             }
 
             // Simulate saving data to database
-            //databaseService.saveSheetData(sheetName, rowData);
+            databaseRepository.saveSheetData(sheetName, rowData);
 
         } catch (Exception e) {
             errors.add("Sheet Index " + sheetIndex + ": " + e.getMessage());
@@ -151,7 +152,7 @@ public class ExcelServiceImpl implements ExcelService {
     private String getCellValueAsString(Cell cell) {
         switch (cell.getCellType()) {
             case STRING: return cell.getStringCellValue();
-            case NUMERIC: return String.valueOf(cell.getNumericCellValue());
+            case NUMERIC: return String.valueOf((int) cell.getNumericCellValue());
             case BOOLEAN: return String.valueOf(cell.getBooleanCellValue());
             case FORMULA: return cell.getCellFormula();
             default: return "";
