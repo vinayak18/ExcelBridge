@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class SaveSheetResponse {
     private String sheetName;
+    private int totalRows;
     private int rowsProcessed;
     private List<String> errors;
 }

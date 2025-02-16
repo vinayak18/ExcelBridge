@@ -2,6 +2,7 @@ package com.common.excel.serviceImpl;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -103,7 +104,7 @@ public class ExcelServiceImpl implements ExcelService {
     	List<String> errors = new ArrayList<>();
         int rowsProcessed = 0;
         String sheetName = "";
-
+        int rowIndex = 0;
         try {
             Sheet sheet = workbook.getSheetAt(sheetIndex);
             sheetName = sheet.getSheetName();
@@ -111,14 +112,14 @@ public class ExcelServiceImpl implements ExcelService {
             List<Map<String, Object>> rowData = new ArrayList<>();
             Iterator<Row> rowIterator = sheet.iterator();
             if (!rowIterator.hasNext()) {
-            	return new SaveSheetResponse(sheetName, rowsProcessed, errors);
+            	return new SaveSheetResponse(sheetName, rowIndex, rowsProcessed, errors);
             }
 
             Row headerRow = rowIterator.next();
             List<String> headers = new ArrayList<>();
             headerRow.forEach(cell -> headers.add(cell.getStringCellValue()));
             
-            int rowIndex = 1;
+            rowIndex = 1;
             while (rowIterator.hasNext()) {
                 Row row = rowIterator.next();
                 Map<String, Object> rowMap = new HashMap<>();
@@ -135,24 +136,29 @@ public class ExcelServiceImpl implements ExcelService {
                 if(isValidRow) {
                 	rowData.add(rowMap);
                 }
-                rowsProcessed++;
                 rowIndex++;
             }
 
             // Simulate saving data to database
-            databaseRepository.saveSheetData(sheetName, rowData);
+            rowsProcessed = databaseRepository.saveSheetData(sheetName, rowData);
 
         } catch (Exception e) {
             errors.add("Sheet Index " + sheetIndex + ": " + e.getMessage());
         }
 
-        return new SaveSheetResponse(sheetName, rowsProcessed, errors);
+        return new SaveSheetResponse(sheetName, rowIndex-1, rowsProcessed, errors);
     }
 
     private String getCellValueAsString(Cell cell) {
         switch (cell.getCellType()) {
             case STRING: return cell.getStringCellValue();
-            case NUMERIC: return String.valueOf((int) cell.getNumericCellValue());
+            case NUMERIC: 
+            	if (DateUtil.isCellDateFormatted(cell)) {
+                    // Convert date cell properly
+                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+                    return sdf.format(cell.getDateCellValue());
+                }
+            	return String.valueOf((int) cell.getNumericCellValue());
             case BOOLEAN: return String.valueOf(cell.getBooleanCellValue());
             case FORMULA: return cell.getCellFormula();
             default: return "";

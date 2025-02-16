@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
+import com.common.excel.constants.ExcelServiceConstants;
 import com.common.excel.repository.DatabaseRepository;
 
 @Repository
@@ -16,13 +17,16 @@ public class JdbcDatabaseRepository implements DatabaseRepository {
 	private JdbcTemplate jdbcTemplate;
 
     @Override
-	public void saveSheetData(String sheetName, List<Map<String, Object>> rowData) {
+	public int saveSheetData(String sheetName, List<Map<String, Object>> rowData) {
 		if (rowData.isEmpty()) {
-            return;
+            return 0;
         }
-
+		String tableName = getTableName(sheetName);
+		if(isTableExists(tableName,rowData.get(0))) {
+    	}
+		System.out.println(tableName);
         int rowsProcessed = 0;
-        String sql = getInsertQuery(sheetName, rowData.get(0));
+        String sql = getInsertQuery(tableName, rowData.get(0));
 
         for (Map<String, Object> row : rowData) {
             Object[] values = row.values().toArray();
@@ -33,11 +37,12 @@ public class JdbcDatabaseRepository implements DatabaseRepository {
                 System.err.println("Error inserting row into " + sheetName + ": " + e.getMessage());
             }
         }
+        return rowsProcessed;
     }
 
-    private String getInsertQuery(String sheetName, Map<String, Object> firstRow) {
+    private String getInsertQuery(String tableName, Map<String, Object> firstRow) {
         StringBuilder query = new StringBuilder("INSERT INTO ");
-        query.append(getTableName(sheetName)).append(" (");
+        query.append(tableName).append(" (");
 
         // Column names
         String columnNames = String.join(", ", firstRow.keySet());
@@ -52,7 +57,19 @@ public class JdbcDatabaseRepository implements DatabaseRepository {
     }
 
     private String getTableName(String sheetName) {
-    	return sheetName.replace(" ", "_");
+    	return sheetName.toUpperCase().replace(" ", "_");
     }
 
+    private boolean isTableExists(String tableName, Map<String, Object> firstRow) {
+    	if(!ExcelServiceConstants.TABLE_RECORDS.containsKey(tableName)) {
+			throw new RuntimeException("Table - "+ tableName +" does not exists for the given sheet.");
+		}
+    	List<String> columnsNames = ExcelServiceConstants.TABLE_RECORDS.get(tableName);
+    	for(String column: firstRow.keySet()) {
+    		if(!columnsNames.contains(column)) {
+    			throw new RuntimeException("Column - "+ column +" does not exists for the given sheet.");
+    		}
+    	}
+    	return true;
+    }
 }

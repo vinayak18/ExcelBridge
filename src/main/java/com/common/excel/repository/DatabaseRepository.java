@@ -5,5 +5,5 @@ import java.util.Map;
 
 public interface DatabaseRepository {
 
-	public void saveSheetData(String sheetName,List<Map<String, Object>> rowData);
+	public int saveSheetData(String sheetName,List<Map<String, Object>> rowData);
 }
